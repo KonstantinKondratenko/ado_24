@@ -36,15 +36,17 @@ class LineDetector:
         out = cv2.cvtColor(mask, cv2.COLOR_GRAY2BGR)
         self._writer.write(out)
 
-        # contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
-        # if contours:
-        #     largest_contour = max(contours, key=cv2.contourArea)
-        #     M = cv2.moments(largest_contour)
-        #     if M["m00"] != 0:
-        #         cx = int(M["m10"] / M["m00"])
-        #         cy = int(M["m01"] / M["m00"])
-        #         return cx, cy
+        if contours:
+            largest_contour = max(contours, key=cv2.contourArea)
+            M = cv2.moments(largest_contour)
+            if M["m00"] != 0:
+                cx = int(M["m10"] / M["m00"])
+                cy = int(M["m01"] / M["m00"])
+                return cx, cy
+            
+        return None, None
 
 
 class AdoQualificationTaskSolution(TaskSolution):
@@ -61,10 +63,22 @@ class AdoQualificationTaskSolution(TaskSolution):
 
         # получение координат утки, до которой необходимо доехать
         goal = self.generated_task["target_coordinates"]
+        
+        def calculate_steering_angle(cx, image_width):
+            # Calculate the steering angle based on the deviation from the center of the image
+            center_x = image_width / 2
+            deviation = cx - center_x
+            steering_angle = deviation / center_x
+            return steering_angle
 
         for i in range(200):
             obs, _, _, _ = env.step([0, 0.3])
-            line_detector.detect(obs)
+            cx, cy = line_detector.detect(obs)
+            
+            if cx is not None:
+                # Calculate the steering angle based on the centroid of the detected line
+                steering_angle = calculate_steering_angle(cx, width)
+                env.step([steering_angle, 0])
 
         # получение изначальных данных о расстоянии и угле до конечной точки
         target_info = self.generated_task["start_target_info"]
