@@ -71,14 +71,16 @@ class AdoQualificationTaskSolution(TaskSolution):
             steering_angle = deviation / center_x
             return steering_angle
 
-        for i in range(200):
-            obs, _, _, _ = env.step([0, 0.3])
+        for i in range(1000):
             cx, cy = line_detector.detect(obs)
-            
             if cx is not None:
+                print(cx)
                 # Calculate the steering angle based on the centroid of the detected line
                 steering_angle = calculate_steering_angle(cx, width)
-                env.step([steering_angle, 0])
+                obs, _, _, _ = env.step([0.2, -steering_angle])
+            else:
+                obs, _, _, _ = env.step([0, 0.3])
+                
 
         # получение изначальных данных о расстоянии и угле до конечной точки
         target_info = self.generated_task["start_target_info"]
